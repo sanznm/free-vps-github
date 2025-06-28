@@ -1,0 +1,32 @@
+name: Free VPS via GitHub Actions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  vps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH Server
+        run: |
+          sudo apt update
+          sudo apt install -y openssh-server
+          sudo systemctl enable ssh
+          sudo systemctl start ssh
+          echo "runner:runnerpassword" | sudo chpasswd
+          sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo systemctl restart ssh
+
+      - name: Setup Ngrok
+        run: |
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok
+          ngrok authtoken <2frzNARuGBh4I8igxzkrFmIWwB7_2QyQGxTwZgX5XUwn89HuV>
+          nohup ngrok tcp 22 --log=stdout &
+
+      - name: Show Ngrok info
+        run: curl --silent http://localhost:4040/api/tunnels
+
+      - name: Keep Alive
+        run: sleep 3600
